@@ -1,0 +1,84 @@
+# Co-Authored by Google Gemini 
+# Project Specification & Architecture Roadmap: FDE Birthday Card Application
+
+## 1. Executive Summary & Objective
+The goal of this project is to build an enterprise-grade, highly reliable, full-stack microservice application named **Birthday Card App**. Designed with a Forward Deployed Engineer (FDE) mindset, the application emphasizes robust backend architecture, secure token-based authentication, server-to-server API integrations, asynchronous background task handling, and a modular service-oriented layout.
+
+---
+
+## 2. Core Functional Requirements
+
+### A. User Management & Authentication
+* **User Registration:** Allows new users to create accounts using a unique email address and a secure password.
+* **Password Security:** Plaintext passwords are never stored; they are securely hashed using bcrypt via `passlib`.
+* **Token Authentication:** Implements OAuth2 Password Flow with JSON Web Tokens (JWT) using `python-jose` for secure, stateless session handling.
+* **Protected Routes:** Endpoints requiring authorization validate the incoming Bearer token from request headers before granting access.
+
+### B. Birthday Card Creation & Management
+* **Card Creation:** Authenticated users can create custom birthday cards specifying a recipient email address, title, message body, template style, and a scheduled delivery date.
+* **Unique Public Sharing:** Every card automatically generates an unguessable UUID-based slug (`/cards/{uuid}`) allowing public recipients to view the card without needing an account.
+* **Recipient Vault:** Registered users can log in and view a private "vault" (`/cards/vault`) containing all cards sent directly to their registered email address.
+
+### C. Server-to-Server Email Dispatch & Webhook Sync
+* **Asynchronous Integration:** Communicates with external email delivery APIs (e.g., Resend or SendGrid) using `httpx`.
+* **Non-Blocking Execution:** Uses FastAPI's `BackgroundTasks` to queue email dispatches asynchronously, ensuring API responses remain sub-millisecond.
+* **Status Tracking:** Tracks delivery lifecycle states (`pending`, `sent`, `failed`).
+
+---
+
+## 3. Technology Stack
+
+* **Language:** Python 3.11+
+* **Web Framework:** FastAPI (high performance, auto-generated OpenAPI/Swagger docs at `/docs`)
+* **ASGI Server:** Uvicorn with auto-reload capabilities
+* **Database & ORM:** SQLAlchemy 2.0 (ORM mapping with PostgreSQL for production and local SQLite for rapid prototyping)
+* **Data Validation:** Pydantic v2 (strict type checking and email formatting via `pydantic[email]`)
+* **Security & Crypto:** `passlib[bcrypt]` and `python-jose[cryptography]`
+* **HTTP Client:** `httpx` for asynchronous server-to-server communication
+* **Containerization:** Docker & Docker Compose for enterprise multi-container orchestration
+* **Version Control:** Git & GitHub (`Birthday-Card-App`)
+
+---
+
+## 4. System Architecture & File Structure
+
+```text
+Birthday-Card-App/
+├── app/
+│   ├── __init__.py          # Package initialization marker
+│   ├── database.py          # SQLAlchemy engine, session factory, and get_db dependency
+│   ├── models.py            # SQLAlchemy database ORM models (User, Card)
+│   ├── schemas.py           # Pydantic validation models for request/response payloads
+│   ├── auth.py              # JWT encoding, decoding, password hashing, and user dependency
+│   ├── routers/
+│   │   ├── auth.py          # Authentication routes (/auth/register, /auth/token)
+│   │   └── cards.py         # Card management routes (POST /, GET /vault, GET /{uuid})
+│   └── services/
+│       └── email.py         # External server-to-server email dispatch client (httpx)
+├── Dockerfile               # Container build instructions for FastAPI app
+├── docker-compose.yml       # Orchestrates web service and PostgreSQL database containers
+├── requirements.txt         # Pinned project dependencies
+└── .env                     # Environment variables (SECRET_KEY, DATABASE_URL, API keys)
+
+1. Phase 1: Environment & Foundational Setup
+   - Configure virtual environment (.venv) and pin dependencies in requirements.txt.
+   - Establish database connection handling in app/database.py.
+
+2. Phase 2: Core Data Contracts & Models
+   - Implement SQLAlchemy database tables (User, Card) in app/models.py.
+   - Implement Pydantic data validation classes in app/schemas.py.
+
+3. Phase 3: Security & Authentication Layer
+   - Build password hashing utilities and JWT token generation/validation in app/auth.py.
+   - Expose /auth/register and /auth/token endpoints in app/routers/auth.py.
+
+4. Phase 4: Card Management & Vault Logic
+   - Implement card creation, public viewing by UUID, and user vault retrieval in app/routers/cards.py.
+
+5. Phase 5: Server-to-Server Notification Engine
+   - Build asynchronous HTTP email dispatch client using httpx in app/services/email.py.
+   - Integrate FastAPI BackgroundTasks into card creation for non-blocking notification dispatches.
+
+6. Phase 6: Containerization & Deployment
+   - Package application via Dockerfile and orchestrate with PostgreSQL using docker-compose.yml.
+   - Push version-controlled increments to GitHub repository Birthday-Card-App.
